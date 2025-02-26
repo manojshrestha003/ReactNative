@@ -1,40 +1,42 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Pressable, Text, StyleSheet, ActivityIndicator, View } from 'react-native';
 
 const Button = ({ buttonStyle, textStyle, title, onPress = () => {}, loading = false, hasShadow = false }) => {
   return (
-    <Pressable 
-      style={[styles.button, hasShadow && styles.shadow, buttonStyle]} 
-      onPress={onPress} 
+    <Pressable
+      style={({ pressed }) => [
+        styles.button,
+        hasShadow && styles.shadow,
+        buttonStyle,
+        pressed && { opacity: 0.7 } 
+      ]}
+      onPress={onPress}
       disabled={loading}
     >
       {loading ? (
         <ActivityIndicator size="small" color="#fff" />
       ) : (
-        <Text style={[styles.text, textStyle]}>Getting Started</Text>
+        <Text style={[styles.text, textStyle]}>{title}</Text>
       )}
     </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
-    button: {
-        backgroundColor: '#32CD32', 
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 8,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 50,
-       
-       
-        
-      },
-      
+  button: {
+    backgroundColor: '#32CD32',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 50,
+    minWidth: 150,
+  },
   text: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
   },
   shadow: {
     shadowColor: '#000',

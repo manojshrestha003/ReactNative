@@ -9,7 +9,7 @@ const index = () => {
     <ScreenWrapper>
         <View>
             <Text>Hello Nepal</Text>
-            <Button title='Welcome' onPress={()=>{router.push('welcome')}}/>
+            <Button title='Welcome' onPress={()=>{router.push('/welcome')}}/>
         </View>
 
         </ScreenWrapper>
