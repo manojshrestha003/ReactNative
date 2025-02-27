@@ -1,11 +1,13 @@
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { supabase } from '../lib/superbase';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const validateEmail = (email) => {
@@ -13,7 +15,7 @@ const Login = () => {
     return emailRegex.test(email);
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
@@ -22,15 +24,30 @@ const Login = () => {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-    console.log('Email:', email);
-    console.log('Password:', password);
+
+    setLoading(true); 
+
+    const { error} = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    setLoading(false); 
+
+    if (error) {
+      Alert.alert('Login Failed', error.message);
+      return;
+    }
+
+    Alert.alert('Success', 'Login successful');
+    router.push('/dashboard'); 
   };
 
   return (
     <View style={styles.container}>
       <TouchableOpacity onPress={() => router.back()} style={{ position: 'absolute', top: 50, left: 20 }}>
-      <Ionicons name="chevron-back" size={30} color="black" />
-    </TouchableOpacity>
+        <Ionicons name="chevron-back" size={30} color="black" />
+      </TouchableOpacity>
       <Text style={styles.welcomeText}>Welcome Back</Text>
       <Text style={styles.subText}>Please login to continue</Text>
       <View style={styles.inputContainer}>
@@ -39,6 +56,8 @@ const Login = () => {
           style={styles.input}
           placeholder="Email"
           keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
           value={email}
           onChangeText={setEmail}
         />
@@ -49,12 +68,14 @@ const Login = () => {
           style={styles.input}
           placeholder="Password"
           secureTextEntry
+          autoCapitalize="none"
+          autoCorrect={false}
           value={password}
           onChangeText={setPassword}
         />
       </View>
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Login</Text>
+      <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Login</Text>}
       </TouchableOpacity>
       <TouchableOpacity>
         <Text style={styles.forgotPassword}>Forgot Password?</Text>

@@ -3,9 +3,10 @@ import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import ScreenWrapper from '../components/ScreenWrapper';
 import { useRouter } from 'expo-router';
+import { supabase } from '../lib/superbase';
 
 const SignUp = () => {
-  const [username, setUsername] = useState('');
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const router = useRouter()
@@ -15,19 +16,48 @@ const SignUp = () => {
     return emailRegex.test(email);
   };
 
-  const handleSignUp = () => {
-    if (!username || !email || !password) {
+  const handleSignUp = async () => {
+    if (!name || !email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
+
     if (!validateEmail(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-    console.log('Username:', username);
-    console.log('Email:', email);
-    console.log('Password:', password);
+
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
+    try {
+      const { data: { session }, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {name }
+        }
+      });
+
+      if (error) {
+        console.error("SignUp Error:", error);
+        Alert.alert("Sign up failed", error.message);
+        return;
+      }
+
+      console.log("Session:", session);
+      Alert.alert("Success", "Account created successfully!");
+      router.push('/login');
+
+    } catch (err) {
+      console.error("Unexpected Error:", err);
+      Alert.alert("Error", "Something went wrong. Please try again.");
+    }
   };
+
+
 
   return (
     <ScreenWrapper>
@@ -42,8 +72,8 @@ const SignUp = () => {
           <TextInput
             style={styles.input}
             placeholder="Username"
-            value={username}
-            onChangeText={setUsername}
+            value={name}
+            onChangeText={setName}
           />
         </View>
         <View style={styles.inputContainer}>

@@ -1,0 +1,2 @@
+export const  superbaseUrl ='https://gkizxpcaythvwogofgic.supabase.co' 
+export const superbaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdraXp4cGNheXRodndvZ29mZ2ljIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA2NjM5MjYsImV4cCI6MjA1NjIzOTkyNn0.vlznRYw7aBy4xoYUvIivLKkeeDhHQYzeebjg1GWBoe8'
