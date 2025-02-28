@@ -40,7 +40,7 @@ const Login = () => {
     }
 
     Alert.alert('Success', 'Login successful');
-    router.push('/dashboard'); 
+   
   };
 
   return (

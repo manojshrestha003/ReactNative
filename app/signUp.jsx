@@ -21,42 +21,59 @@ const SignUp = () => {
       Alert.alert('Error', 'Please fill in all fields');
       return;
     }
-
+  
     if (!validateEmail(email)) {
       Alert.alert('Error', 'Please enter a valid email address');
       return;
     }
-
+  
     if (password.length < 6) {
       Alert.alert('Error', 'Password must be at least 6 characters long');
       return;
     }
-
+  
     try {
-      const { data: { session }, error } = await supabase.auth.signUp({
+      // Sign up the user in Supabase Authentication
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
-        password,
-        options: {
-          data: {name }
-        }
+        password
       });
-
-      if (error) {
-        console.error("SignUp Error:", error);
-        Alert.alert("Sign up failed", error.message);
+  
+      if (signUpError) {
+        console.error("Sign Up Error:", signUpError);
+        Alert.alert("Sign up failed", signUpError.message);
         return;
       }
-
-      console.log("Session:", session);
+  
+      // Get the user ID from the session
+      const userId = signUpData.user?.id;
+  
+      if (!userId) {
+        Alert.alert("Error", "User ID not found. Please try again.");
+        return;
+      }
+  
+      // Insert user data into the 'users' table
+      const { error: insertError } = await supabase.from('users').insert([
+        { id: userId, name }
+      ]);
+  
+      if (insertError) {
+        console.error("Database Insert Error:", insertError);
+        Alert.alert("Database Error", "Failed to save user data.");
+        return;
+      }
+  
+      console.log("User added to database successfully!");
       Alert.alert("Success", "Account created successfully!");
       router.push('/login');
-
+  
     } catch (err) {
       console.error("Unexpected Error:", err);
       Alert.alert("Error", "Something went wrong. Please try again.");
     }
   };
-
+  
 
 
   return (
