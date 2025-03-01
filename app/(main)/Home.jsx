@@ -5,6 +5,7 @@ import { supabase } from '../../lib/superbase';
 import { useAuth } from '../../contexts/authContext';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import Avatar from '../../components/Avatar';
 
 const Home = () => {
   const { user, setAuth } = useAuth();
@@ -30,7 +31,9 @@ const Home = () => {
             <Ionicons name="add-circle-outline" size={22} color="black" />
           </Pressable>
           <Pressable onPress={() => router.push('/profile')} style={styles.iconButton}>
-            <Ionicons name="person-outline" size={22} color="black" />
+           <Avatar   uri={user?.image}
+            
+           />
           </Pressable>
         </View>
       </View>

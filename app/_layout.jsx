@@ -23,7 +23,7 @@ const MainLayout = () => {
 
         if (session?.user) {
           setAuth(session.user);
-          await updateUserData(session.user.id); // Pass user ID
+          await updateUserData(session.user.id); 
           router.replace('/Home');
         } else {
           setAuth(null);
@@ -32,7 +32,7 @@ const MainLayout = () => {
       }
     );
 
-    return () => authListener?.subscription.unsubscribe(); // Cleanup
+    return () => authListener?.subscription.unsubscribe(); 
   }, []);
 
   const updateUserData = async (userId) => {

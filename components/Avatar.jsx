@@ -1,14 +1,31 @@
-import { StyleSheet, Text, View } from 'react-native'
-import React from 'react'
+import { StyleSheet, View } from 'react-native';
+import React from 'react';
+import { Image } from 'expo-image';
 
-const Avatar = () => {
+import { getUserImageSource } from '../services/imageService';
+
+const Avatar = ({ uri }) => {
   return (
     <View>
-      <Text>Avatar</Text>
+      <Image 
+        source={getUserImageSource(uri)}  
+        transition={100} 
+        style={styles.avatar}
+        contentFit="cover" // ✅ Use contentFit instead of resizeMode
+      />
     </View>
-  )
-}
+  );
+};
 
-export default Avatar
+export default Avatar;
 
-const styles = StyleSheet.create({})
+const styles = StyleSheet.create({
+  avatar: {
+    width: 40, 
+    height: 40, 
+    borderRadius: 40, 
+    borderWidth: 2, 
+    borderColor: '#ddd',
+    overflow: 'hidden',
+  },
+});
