@@ -11,7 +11,7 @@ const Avatar = ({ uri }) => {
         source={getUserImageSource(uri)}  
         transition={100} 
         style={styles.avatar}
-        contentFit="cover" // ✅ Use contentFit instead of resizeMode
+        contentFit="cover" 
       />
     </View>
   );

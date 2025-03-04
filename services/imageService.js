@@ -7,7 +7,9 @@ import { superbaseUrl } from '../constants';
 
 export const getUserImageSource = (imagePath) => {
     if (imagePath) {
+        console.log('imagePath', imagePath);
         return getSupabaseFileUrl(imagePath);
+    
     } else {
         return require('../assets/images/defaultUser.png');
     }

@@ -65,6 +65,7 @@ const UserHeader = ({ user, router, onLogout }) => {
             <Ionicons name="log-out-outline" size={24} color="white" />
           </TouchableOpacity>
         }
+        
       />
 
       {/* Profile Avatar and Edit Icon */}
