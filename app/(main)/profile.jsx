@@ -11,13 +11,13 @@ import ScreenWrapper from '../../components/ScreenWrapper';
 import { useAuth } from '../../contexts/authContext';
 import { useRouter } from 'expo-router';
 import Header from '../../components/Header';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons'; // Import icons
+import { Ionicons, MaterialIcons } from '@expo/vector-icons'; 
 import { supabase } from '../../lib/superbase';
 import Avatar from '../../components/Avatar';
 import { getUserData } from '../../services/userService';
 
 const Profile = () => {
-  const { user, setAuth } = useAuth(); // Access authentication state
+  const { user, setAuth } = useAuth(); 
   const router = useRouter();
 
   const handleLogout = async () => {
