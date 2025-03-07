@@ -1,19 +1,32 @@
-import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { StyleSheet, Text, TextInput, View, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import Header from '../../components/Header';
 import Avatar from '../../components/Avatar';
 import { useAuth } from '../../contexts/authContext';
 import { MaterialIcons, Entypo } from '@expo/vector-icons';
 import { getUserData } from '../../services/userService';
-import * as ImagePicker from 'expo-image-picker'; 
+import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../../lib/superbase';
+import { uploadFile } from '../../services/imageService';
+import { Video as ExpoVideo } from 'expo-av';
 
-import { Video as ExpoVideo } from 'expo-av'; 
+import { useRouter } from 'expo-router';
 
 const NewPost = () => {
+  const router = useRouter();
   const { user } = useAuth();
+
   const [getUser, setGetUser] = useState({});
   const [selectedImage, setSelectedImage] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [caption, setCaption] = useState("");
+  const [isUploading, setIsUploading] = useState(false); // State for activity indicator
+
+  useEffect(() => {
+    if (user?.id) {
+      updateUserData(user.id);
+    }
+  }, []);
 
   const updateUserData = async (userId) => {
     try {
@@ -24,23 +37,19 @@ const NewPost = () => {
     }
   };
 
-  useEffect(() => {
-    updateUserData(user.id);
-  }, []);
-
   // Function to open the image picker
   const openImageGallery = async () => {
     let permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.granted) {
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, 
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         quality: 1,
       });
 
       if (!result.canceled && result.assets.length > 0) {
-        setSelectedImage(result.assets[0].uri); 
-        setSelectedVideo(null); 
+        setSelectedImage(result.assets[0].uri);
+        setSelectedVideo(null);
       }
     }
   };
@@ -50,15 +59,90 @@ const NewPost = () => {
     let permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permission.granted) {
       let result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Videos, // Pick video correctly
+        mediaTypes: ImagePicker.MediaTypeOptions.Videos,
         allowsEditing: true,
         quality: 1,
       });
 
       if (!result.canceled && result.assets.length > 0) {
         setSelectedVideo(result.assets[0].uri);
-        setSelectedImage(null); 
+        setSelectedImage(null);
       }
+    }
+  };
+
+  // Function to upload post
+  const createOrUpdatePost = async () => {
+    try {
+      let fileUrl = null;
+      let fileType = null;
+
+   
+      if (selectedImage) {
+        fileType = "image";
+        console.log("Uploading image:", selectedImage);
+        let uploadResult = await uploadFile("postImages", selectedImage, true);
+        console.log("Upload Result:", uploadResult);
+
+        if (uploadResult.success) {
+          fileUrl = uploadResult.data;
+        } else {
+          alert("Could not upload image");
+          return { success: false, message: "Could not upload image" };
+        }
+      } else if (selectedVideo) {
+        fileType = "video";
+        console.log("Uploading video:", selectedVideo);
+        let uploadResult = await uploadFile("postVideos", selectedVideo, false);
+        console.log("Upload Result:", uploadResult);
+
+        if (uploadResult.success) {
+          fileUrl = uploadResult.data;
+        } else {
+          alert("Could not upload video");
+          return { success: false, message: "Could not upload video" };
+        }
+      }
+
+      
+      const post = {
+        userId: user.id,
+        body: caption,
+        file: fileUrl,
+        created_at: new Date(),
+      };
+
+      console.log("Uploading post to database:", post);
+
+      const { data, error } = await supabase.from("posts").insert(post).select().single();
+      
+      if (error) {
+        console.error("Create post Error:", error.message);
+        return { success: false, message: error.message };
+      }
+
+      console.log("Post successfully created:", data);
+      return { success: true, data };
+    } catch (error) {
+      console.error("Create post Error:", error);
+      return { success: false, message: "Could not create post" };
+    }
+  };
+
+
+  const onSubmit = async () => {
+    setIsUploading(true); 
+    const result = await createOrUpdatePost();
+    setIsUploading(false); 
+
+    if (result.success) {
+      alert("Post uploaded successfully!");
+      setCaption("");
+      setSelectedImage(null);
+      setSelectedVideo(null);
+      router.push('/Home')
+    } else {
+      alert(result.message);
     }
   };
 
@@ -80,6 +164,8 @@ const NewPost = () => {
           style={styles.textInput}
           placeholder="What's on your mind!"
           multiline
+          value={caption}
+          onChangeText={setCaption}
         />
 
         {/* Media Options */}
@@ -112,8 +198,12 @@ const NewPost = () => {
       </ScrollView>
 
       {/* Post Button */}
-      <TouchableOpacity style={styles.postButton}>
-        <Text style={styles.postButtonText}>Post</Text>
+      <TouchableOpacity style={styles.postButton} onPress={onSubmit}>
+        {isUploading ? (
+          <ActivityIndicator size="small" color="white" />
+        ) : (
+          <Text style={styles.postButtonText}>Post</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -161,14 +251,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     marginTop: 20,
   },
-  optionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  optionText: {
-    fontSize: 16,
-  },
   mediaPreview: {
     marginTop: 20,
     alignItems: 'center',
@@ -187,13 +269,12 @@ const styles = StyleSheet.create({
   postButton: {
     backgroundColor: 'green',
     padding: 15,
+    borderRadius: 8,
     alignItems: 'center',
-    justifyContent: 'center',
     position: 'absolute',
     bottom: 20,
     left: 20,
     right: 20,
-    borderRadius: 8,
   },
   postButtonText: {
     color: 'white',
@@ -201,3 +282,4 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 });
+
