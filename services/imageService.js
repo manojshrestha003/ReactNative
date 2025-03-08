@@ -1,24 +1,27 @@
 import * as FileSystem from 'expo-file-system';
 import { supabase } from '../lib/superbase';
-import { superbaseUrl } from '../constants';
-
 
 export const getUserImageSource = (imagePath) => {
-    if (imagePath) {
-        console.log('imagePath', imagePath);
+    if (imagePath?.uri) {
+ 
+        console.log('Local image path:', imagePath.uri);
+        return { uri: imagePath.uri };
+    } else if (typeof imagePath === 'string' && imagePath.trim() !== '') {
+     
+        
         return getSupabaseFileUrl(imagePath);
     } else {
+     
         return require('../assets/images/defaultUser.png');
     }
 };
 
-
 export const getSupabaseFileUrl = (filePath) => {
-    if (filePath) {
-        return { uri: `${superbaseUrl}/storage/v1/object/public/uploads/${filePath}` };
-    }
-    return null;
+    return filePath
+        ? { uri: `https://alrzxgvbagnrdlkjtwxm.supabase.co/storage/v1/object/public/uploads/${filePath}` }
+        : null;
 };
+
 
 
 export const uploadFile = async (folderName, fileUri, isImage = true) => {

@@ -7,12 +7,14 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import Avatar from '../../components/Avatar';
 import { Video } from 'expo-av';
+import { getUserData } from '../../services/userService';
 
 const Home = () => {
   const videoRef = useRef(null)
   const { user } = useAuth();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [getUser, setGetUser] = useState({})
   const router = useRouter();
 
   useEffect(() => {
@@ -44,7 +46,17 @@ const Home = () => {
     }
     setLoading(false); 
   };
-
+const updateUserData = async (userId) => {
+      try {
+        const res = await getUserData(userId);
+        setGetUser(res)
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+    useEffect(()=>{
+      updateUserData(user.id); 
+    },[])
   return (
     <ScreenWrapper>
       <View style={styles.header}>
@@ -57,7 +69,7 @@ const Home = () => {
             <Ionicons name="add-circle-outline" size={22} color="black" />
           </Pressable>
           <Pressable onPress={() => router.push('/profile')} style={styles.iconButton}>
-            <Avatar uri={user?.image} />
+             <Avatar uri={getUser?.data?.image} />
           </Pressable>
         </View>
       </View>
@@ -71,18 +83,21 @@ const Home = () => {
           <View key={index} style={styles.card}>
             <View style={styles.userContainer}>
               <Avatar uri={post.user.image} style={styles.avatar} />
-              <View style={{ marginLeft: 10 }}>
-                <Text style={styles.userName}>{post.user.name}</Text>
-                <Text style={styles.timestamp}>
-                  {new Date(post.created_at).toLocaleString(undefined, {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                  })}
-                </Text>
+              <View style={{ marginLeft: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                <View>
+                  <Text style={styles.userName}>{post.user.name}</Text>
+                  <Text style={styles.timestamp}>
+                    {new Date(post.created_at).toLocaleString(undefined, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true,
+                    })}
+                  </Text>
+                </View>
+                <Ionicons name="ellipsis-vertical" size={20} color="black" />
               </View>
             </View>
 

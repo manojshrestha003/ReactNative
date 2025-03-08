@@ -70,7 +70,7 @@ const UserHeader = ({ user, router, onLogout }) => {
 
       {/* Profile Avatar and Edit Icon */}
       <View style={styles.avatarContainer}>
-        <Avatar uri={user?.data?.image || null} />
+        <Avatar uri={getUser?.data?.image} />
         <Pressable style={styles.editIcon}>
           <Ionicons name="create-outline" size={20} color="white"  onPress={()=>{router.push('/editProfile')}}/>
         </Pressable>
