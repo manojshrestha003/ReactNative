@@ -6,7 +6,7 @@ import {
   Alert, 
   Pressable 
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { useAuth } from '../../contexts/authContext';
 import { useRouter } from 'expo-router';
@@ -31,6 +31,14 @@ const Profile = () => {
     }
   };
 
+  if (!user) {
+    return (
+      <ScreenWrapper>
+        <Text>Loading...</Text>
+      </ScreenWrapper>
+    );
+  }
+
   return (
     <ScreenWrapper>
       <UserHeader user={user} router={router} onLogout={handleLogout} />
@@ -39,19 +47,22 @@ const Profile = () => {
 };
 
 const UserHeader = ({ user, router, onLogout }) => {
-  const [getUser, setGetUser] = useState({})
+  const [getUser, setGetUser] = useState({});
 
-   const updateUserData = async (userId) => {
-      try {
-        const res = await getUserData(userId);
-        setGetUser(res)
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-      }
-    };
-    useEffect(()=>{
-      updateUserData(user.id); 
-    },[])
+  const updateUserData = async (userId) => {
+    try {
+      const res = await getUserData(userId);
+      setGetUser(res);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (user && user.id) {
+      updateUserData(user.id);
+    }
+  }, [user]);
 
   return (
     <View style={styles.container}>
@@ -65,14 +76,13 @@ const UserHeader = ({ user, router, onLogout }) => {
             <Ionicons name="log-out-outline" size={24} color="white" />
           </TouchableOpacity>
         }
-        
       />
 
       {/* Profile Avatar and Edit Icon */}
       <View style={styles.avatarContainer}>
-        <Avatar uri={getUser?.data?.image} />
+        <Avatar uri={getUser?.data?.image || ''} />
         <Pressable style={styles.editIcon}>
-          <Ionicons name="create-outline" size={20} color="white"  onPress={()=>{router.push('/editProfile')}}/>
+          <Ionicons name="create-outline" size={20} color="white" onPress={() => router.push('/editProfile')} />
         </Pressable>
       </View>
 
@@ -120,7 +130,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginVertical: 20,
     position: 'relative',
-    
   },
   editIcon: {
     position: 'absolute',
