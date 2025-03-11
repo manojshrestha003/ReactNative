@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Button, Alert, Pressable, Image, ScrollView, ActivityIndicator, Share } from 'react-native';
+import { StyleSheet, Text, View, Button, Alert, Pressable, Image, ScrollView, ActivityIndicator, Share, Modal } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { supabase } from '../../lib/superbase';
@@ -15,6 +15,9 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [getUser, setGetUser] = useState({});
   const [likes, setLikes] = useState([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedPostId, setSelectedPostId] = useState(null);
+  const [post, setPost] = useState(null)
   const router = useRouter();
 
  
@@ -140,6 +143,37 @@ const Home = () => {
     fetchLikes();
   }, []); 
 
+  useEffect(() => {
+    getPostDetails();
+  }, [selectedPostId]); 
+  
+  const fetchPostDetails = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*, user:users (id, name, image)', 'postLikes(*)')
+        .eq('id', selectedPostId)
+        .single();
+  
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      console.error('Fetch postDetails error:', error);
+      return { success: false, message: 'Could not fetch the post' };
+    }
+  };
+  
+  const getPostDetails = async () => {
+    const res = await fetchPostDetails(); 
+    console.log('Post details are: ', res);
+    
+    if (res.success) {
+      setPost(res.data);
+    }
+  };
+  
+
+  
   
   const onShare = async (post) => {
     try {
@@ -155,23 +189,14 @@ const Home = () => {
       console.error('Error sharing content:', error);
     }
   };
-  const openPostDetails = async (postId) => {
+  const openPostDetails = (postId) => {
     if (!user || !user.id) {
       Alert.alert('Error', 'User is not logged in.');
       return;
     }
-  
-    try {
-      
-      router.push({
-        pathname: '/postDetails',
-        query: { postId: postId },  
-      });
-      console.log("PostID  is " , postId)
-    } catch (error) {
-      console.error('Error opening post details:', error);
-      Alert.alert('Error', 'Could not open post details');
-    }
+    
+    setSelectedPostId(postId);
+    setModalVisible(true);
   };
   
   
@@ -277,6 +302,20 @@ const Home = () => {
 
         {loading && <ActivityIndicator size="large" color="green" style={styles.loadingIndicator} />}
       </ScrollView>
+
+      {/* Modal for Comments */}
+      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text>Post ID: {selectedPostId}</Text>
+            <Text>
+             Hello
+            </Text>
+           
+            <Button title="Close" onPress={() => setModalVisible(false)} />
+          </View>
+        </View>
+      </Modal>
     </ScreenWrapper>
   );
 };
@@ -372,5 +411,22 @@ const styles = StyleSheet.create({
   },
   likeCount: {
     marginLeft: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    width: '95%', 
+    height: '70%', 
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5, 
   },
 });
