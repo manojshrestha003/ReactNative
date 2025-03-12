@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, Button, Alert, Pressable, Image, ScrollView, ActivityIndicator, Share, Modal } from 'react-native';
+import { StyleSheet, Text, View, Button, Alert, Pressable, Image, ScrollView, ActivityIndicator, Share, Modal, TextInput } from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { supabase } from '../../lib/superbase';
@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import Avatar from '../../components/Avatar';
 import { Video } from 'expo-av';
 import { getUserData } from '../../services/userService';
+
 const Home = () => {
   const videoRef = useRef(null);
   const { user, loading: authLoading } = useAuth(); 
@@ -17,10 +18,10 @@ const Home = () => {
   const [likes, setLikes] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
-  const [post, setPost] = useState(null)
+  const [selectedPost, setSelectedPost] = useState(null);
+  const [comment, setComment] = useState(''); // new state for comment
   const router = useRouter();
 
- 
   useEffect(() => {
     if (!authLoading && user && user.id) {
       updateUserData(user.id);
@@ -28,12 +29,11 @@ const Home = () => {
     }
   }, [user, authLoading]);
 
-  
   const fetchPosts = async () => {
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, user:users (id, name, image)', 'postLikes(*)')
+        .select('*, user:users (id, name, image), postLikes(*)')
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -49,12 +49,12 @@ const Home = () => {
     setLoading(true);
     const res = await fetchPosts();
     console.log('got post data', res);
-
     if (res.success) {
       setPosts(res.data);
     }
     setLoading(false);
   };
+
   useEffect(() => {
     console.log("Post ids are: ", posts.map(post => post.id));
   }, [posts]);
@@ -108,7 +108,6 @@ const Home = () => {
 
     try {
       const existingLike = likes.find((like) => like.postId === postId && like.userId === user.id);
-
       if (existingLike) {
         const res = await removePostLike(postId, user.id);
         if (res.success) {
@@ -146,12 +145,13 @@ const Home = () => {
   useEffect(() => {
     getPostDetails();
   }, [selectedPostId]); 
-  
+
   const fetchPostDetails = async () => {
+    if (!selectedPostId) return { success: false, message: 'No post selected' };
     try {
       const { data, error } = await supabase
         .from('posts')
-        .select('*, user:users (id, name, image)', 'postLikes(*)')
+        .select('*, user:users (id, name, image), postLikes(*)')
         .eq('id', selectedPostId)
         .single();
   
@@ -166,15 +166,11 @@ const Home = () => {
   const getPostDetails = async () => {
     const res = await fetchPostDetails(); 
     console.log('Post details are: ', res);
-    
     if (res.success) {
-      setPost(res.data);
+      setSelectedPost(res.data);
     }
   };
-  
 
-  
-  
   const onShare = async (post) => {
     try {
       const result = await Share.share({
@@ -189,18 +185,24 @@ const Home = () => {
       console.error('Error sharing content:', error);
     }
   };
+
   const openPostDetails = (postId) => {
     if (!user || !user.id) {
       Alert.alert('Error', 'User is not logged in.');
       return;
     }
-    
+    // Reset previous post details before fetching new one.
+    setSelectedPost(null);
     setSelectedPostId(postId);
     setModalVisible(true);
   };
-  
-  
-  
+
+  // Handler for comment submission (extend with your own logic)
+  const handleCommentSubmit = () => {
+    console.log("Comment submitted:", comment);
+    // Here you would typically call an API to post the comment
+    setComment('');
+  };
 
   if (authLoading) {
     return <ActivityIndicator size="large" color="green" />;
@@ -209,7 +211,6 @@ const Home = () => {
   if (!user) {
     return <Text>User not logged in</Text>;
   }
-
   
   return (
     <ScreenWrapper>
@@ -233,8 +234,8 @@ const Home = () => {
       </View>
 
       <ScrollView>
-        {posts.map((post, index) => (
-          <View key={index} style={styles.card}>
+        {posts.map((post) => (
+          <View key={post.id} style={styles.card}>
             <View style={styles.userContainer}>
               <Avatar uri={post.user.image} style={styles.avatar} />
               <View style={{ marginLeft: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
@@ -251,7 +252,7 @@ const Home = () => {
                     })}
                   </Text>
                 </View>
-                <Ionicons name="ellipsis-vertical" size={20} color="black"  onPress={() => openPostDetails(post.id)}/>
+                <Ionicons name="ellipsis-vertical" size={20} color="black" onPress={() => openPostDetails(post.id)} />
               </View>
             </View>
 
@@ -293,25 +294,73 @@ const Home = () => {
                 <Ionicons name="chatbubble-outline" size={24} color="black" />
               </Pressable>
 
-              <Pressable style={styles.iconButton} onPress={onShare}>
+              <Pressable style={styles.iconButton} onPress={() => onShare(post)}>
                 <Ionicons name="share-outline" size={24} color="black" />
               </Pressable>
             </View>
           </View>
         ))}
-
         {loading && <ActivityIndicator size="large" color="green" style={styles.loadingIndicator} />}
       </ScrollView>
 
-      {/* Modal for Comments */}
+      {/* Modal for Post Details with Comment Input */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
-            <Text>Post ID: {selectedPostId}</Text>
-            <Text>
-             Hello
-            </Text>
-           
+            {selectedPost ? (
+              <>
+                <View style={styles.userContainer}>
+                  <Avatar uri={selectedPost.user.image} style={styles.avatar} />
+                  <View style={{ marginLeft: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flex: 1 }}>
+                    <View>
+                      <Text style={styles.userName}>{selectedPost.user.name}</Text>
+                      <Text style={styles.timestamp}>
+                        {new Date(selectedPost.created_at).toLocaleString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <Text style={styles.body}>{selectedPost.body}</Text>
+                {selectedPost.file && selectedPost.file.endsWith('.mp4') ? (
+                  <Video
+                    ref={videoRef}
+                    source={{ uri: `https://alrzxgvbagnrdlkjtwxm.supabase.co/storage/v1/object/public/uploads/${selectedPost.file}` }}
+                    style={styles.postMedia}
+                    useNativeControls
+                    resizeMode="contain"
+                    shouldPlay={false}
+                    isLooping={false}
+                    onPlaybackStatusUpdate={(status) => {
+                      if (status.didJustFinish) {
+                        videoRef.current?.setPositionAsync(0);
+                      }
+                    }}
+                  />
+                ) : selectedPost.file ? (
+                  <Image
+                    source={{ uri: `https://alrzxgvbagnrdlkjtwxm.supabase.co/storage/v1/object/public/uploads/${selectedPost.file}` }}
+                    style={styles.postMedia}
+                  />
+                ) : null}
+                {/* Comment Input */}
+                <TextInput
+                  style={styles.commentInput}
+                  placeholder="Write a comment..."
+                  value={comment}
+                  onChangeText={(text) => setComment(text)}
+                />
+                <Button title="Post Comment" onPress={handleCommentSubmit} />
+              </>
+            ) : (
+              <ActivityIndicator size="large" color="green" />
+            )}
             <Button title="Close" onPress={() => setModalVisible(false)} />
           </View>
         </View>
@@ -319,7 +368,6 @@ const Home = () => {
     </ScreenWrapper>
   );
 };
-
 
 export default Home;
 
@@ -428,5 +476,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 5,
     elevation: 5, 
+  },
+  commentInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    padding: 10,
+    marginVertical: 10,
   },
 });
