@@ -1,4 +1,16 @@
-import { StyleSheet, Text, View, Button, Alert, Pressable, Image, ScrollView, ActivityIndicator, Share, Modal, TextInput } from 'react-native';
+import {
+  StyleSheet,
+  Text,
+  View,
+  Alert,
+  Pressable,
+  Image,
+  ScrollView,
+  ActivityIndicator,
+  Share,
+  Modal,
+  TextInput
+} from 'react-native';
 import React, { useEffect, useState, useRef } from 'react';
 import ScreenWrapper from '../../components/ScreenWrapper';
 import { supabase } from '../../lib/superbase';
@@ -16,10 +28,11 @@ const Home = () => {
   const [loading, setLoading] = useState(true);
   const [getUser, setGetUser] = useState({});
   const [likes, setLikes] = useState([]);
+  const [comments, setComments] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedPostId, setSelectedPostId] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
-  const [comment, setComment] = useState(''); // new state for comment
+  const [comment, setComment] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -191,17 +204,74 @@ const Home = () => {
       Alert.alert('Error', 'User is not logged in.');
       return;
     }
-    // Reset previous post details before fetching new one.
+    
     setSelectedPost(null);
     setSelectedPostId(postId);
     setModalVisible(true);
   };
 
-  // Handler for comment submission (extend with your own logic)
-  const handleCommentSubmit = () => {
+  // Create comment accepts commentData parameter
+  const createComment  = async (commentData) => {
+    try {
+       const { data, error } = await supabase
+         .from('comments')
+         .insert(commentData)
+         .select()
+         .single();
+      if (error) {
+        console.log("Comment error", error);
+        return { success: false, message: "Could not create comment" };
+      }
+      return { success: true, data };
+    } catch (error) {
+      console.log("Comment error", error);
+      return { success: false, message: "Could not create comment" };
+    }
+  };
+
+  // Fetch comments for the selected post including user details
+  const fetchCommentsForPost = async () => {
+    if (!selectedPost) return;
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .select('*, user:users (id, name, image)')
+        .eq('postId', selectedPost.id)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      setComments(data);
+    } catch (error) {
+      console.error("Error fetching comments:", error);
+    }
+  };
+
+  // Effect to fetch comments when a post is selected/updated
+  useEffect(() => {
+    if (selectedPost) {
+      fetchCommentsForPost();
+    }
+  }, [selectedPost]);
+
+  // Handle comment  submission
+  const handleCommentSubmit = async () => {
+    if (!comment.trim()) {
+      Alert.alert('Error', 'Comment cannot be empty.');
+      return;
+    }
+    const commentData = {
+      userId: user.id,
+      postId: selectedPost.id,
+      text: comment,
+      created_at: new Date().toISOString()
+    };
+    const res = await createComment(commentData);
+    if (res.success) {
+      setComment(''); 
+      await fetchCommentsForPost(); 
+    } else {
+      Alert.alert('Error', res.message);
+    }
     console.log("Comment submitted:", comment);
-    // Here you would typically call an API to post the comment
-    setComment('');
   };
 
   if (authLoading) {
@@ -303,7 +373,7 @@ const Home = () => {
         {loading && <ActivityIndicator size="large" color="green" style={styles.loadingIndicator} />}
       </ScrollView>
 
-      {/* Modal for Post Details with Comment Input */}
+  {/*Modal  for comments */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -349,19 +419,48 @@ const Home = () => {
                     style={styles.postMedia}
                   />
                 ) : null}
-                {/* Comment Input */}
-                <TextInput
-                  style={styles.commentInput}
-                  placeholder="Write a comment..."
-                  value={comment}
-                  onChangeText={(text) => setComment(text)}
-                />
-                <Button title="Post Comment" onPress={handleCommentSubmit} />
+                {/* Comment Input with Send Icon */}
+                <View style={styles.commentInputContainer}>
+                  <TextInput
+                    style={styles.commentInput}
+                    placeholder="Write a comment..."
+                    value={comment}
+                    onChangeText={(text) => setComment(text)}
+                  />
+                  <Pressable onPress={handleCommentSubmit} style={styles.sendIconContainer}>
+                    <Ionicons name="send" size={24} color="green" />
+                  </Pressable>
+                </View>
+                {/* Render Comments */}
+                <ScrollView style={styles.commentsContainer}>
+                  {comments.map((comm) => (
+                    <View key={comm.id} style={styles.commentContainer}>
+                      <View style={styles.commentHeader}>
+                        <Avatar uri={comm.user?.image || 'default_image_url'} style={styles.commentAvatar} />
+                        <Text style={styles.commentName}>{comm.user?.name || "Anonymous"}</Text>
+                      </View>
+                      <Text style={styles.commentText}>{comm.text}</Text>
+                      <Text style={styles.commentTimestamp}>
+                        {new Date(comm.created_at).toLocaleString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true,
+                        })}
+                      </Text>
+                    </View>
+                  ))}
+                </ScrollView>
               </>
             ) : (
               <ActivityIndicator size="large" color="green" />
             )}
-            <Button title="Close" onPress={() => setModalVisible(false)} />
+        
+            <Pressable style={styles.closeButton} onPress={() => setModalVisible(false)}>
+              <Text style={styles.closeButtonText}>Close</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -468,7 +567,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '95%', 
-    height: '70%', 
+    height: '97%', 
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 10,
@@ -477,11 +576,67 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 5, 
   },
+  commentInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+  },
   commentInput: {
+    flex: 1,
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 5,
     padding: 10,
-    marginVertical: 10,
+  },
+  sendIconContainer: {
+    marginLeft: 10,
+  },
+  commentsContainer: {
+    marginTop: 10,
+    maxHeight: 150,
+  },
+  commentContainer: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingVertical: 5,
+    marginBottom: 5,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  commentAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 15,
+  },
+  commentName: {
+    fontWeight: 'bold',
+    fontSize: 14,
+    paddingRight:10
+  },
+  commentText: {
+    fontSize: 14,
+    marginLeft: 40,
+  },
+  commentTimestamp: {
+    fontSize: 10,
+    color: 'gray',
+    marginLeft: 40,
+    marginTop: 2,
+  },
+  closeButton: {
+    backgroundColor: 'green',
+    borderRadius: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 14,
   },
 });
