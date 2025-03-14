@@ -48,7 +48,7 @@ const Home = () => {
         .from('posts')
         .select('*, user:users (id, name, image), postLikes(*)')
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
 
       if (error) throw error;
       return { success: true, data };
@@ -113,26 +113,37 @@ const Home = () => {
     }
   };
 
-  const onLike = async (postId) => {
+  // Updated to accept the full post object
+  const onLike = async (post) => {
     if (!user || !user.id) {
       Alert.alert('Error', 'User is not logged in.');
       return;
     }
 
     try {
-      const existingLike = likes.find((like) => like.postId === postId && like.userId === user.id);
+      const existingLike = likes.find(
+        (like) => like.postId === post.id && like.userId === user.id
+      );
       if (existingLike) {
-        const res = await removePostLike(postId, user.id);
+        const res = await removePostLike(post.id, user.id);
         if (res.success) {
-          setLikes(likes.filter((like) => like.postId !== postId || like.userId !== user.id));
+          setLikes(likes.filter((like) => like.postId !== post.id || like.userId !== user.id));
         } else {
           Alert.alert('Error', 'Could not remove like');
         }
       } else {
-        const newLike = { userId: user.id, postId };
+        const newLike = { userId: user.id, postId: post.id };
         const res = await createPostLike(newLike);
         if (res.success) {
           setLikes([...likes, res.data]);
+          
+          if (post.user.id !== user.id) {
+            await addNotification(
+              `${getUser?.data?.name || 'Someone'} liked your post`,
+              post.user.id, 
+              user.id       
+            );
+          }
         } else {
           Alert.alert('Error', 'Could not like post');
         }
@@ -245,14 +256,14 @@ const Home = () => {
     }
   };
 
-  // Effect to fetch comments when a post is selected/updated
+ 
   useEffect(() => {
     if (selectedPost) {
       fetchCommentsForPost();
     }
   }, [selectedPost]);
 
-  // Handle comment  submission
+  // Handle comment submission
   const handleCommentSubmit = async () => {
     if (!comment.trim()) {
       Alert.alert('Error', 'Comment cannot be empty.');
@@ -268,10 +279,41 @@ const Home = () => {
     if (res.success) {
       setComment(''); 
       await fetchCommentsForPost(); 
+      
+      if (selectedPost.user.id !== user.id) {
+        await addNotification(
+          `${getUser?.data?.name || 'Someone'} commented on your post`,
+          selectedPost.user.id, 
+          user.id               
+        );
+      }
     } else {
       Alert.alert('Error', res.message);
     }
     console.log("Comment submitted:", comment);
+  };
+
+  // Function to add notification 
+  const addNotification = async (title, receiverId, senderId) => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert({
+          title,       
+          receiverId,  
+          senderId     
+        })
+        .select();
+      if (error) {
+        console.error("Error adding notification:", error);
+        return { success: false, error };
+      }
+      console.log("Notification added:", data);
+      return { success: true, data };
+    } catch (err) {
+      console.error("Error in addNotification:", err);
+      return { success: false, error: err };
+    }
   };
 
   if (authLoading) {
@@ -351,7 +393,7 @@ const Home = () => {
             ) : null}
 
             <View style={styles.actionIcons}>
-              <Pressable style={styles.iconButton} onPress={() => onLike(post.id)}>
+              <Pressable style={styles.iconButton} onPress={() => onLike(post)}>
                 <Ionicons
                   name={likes.some((like) => like.postId === post.id && like.userId === user.id) ? 'heart' : 'heart-outline'}
                   size={24}
@@ -373,7 +415,7 @@ const Home = () => {
         {loading && <ActivityIndicator size="large" color="green" style={styles.loadingIndicator} />}
       </ScrollView>
 
-  {/*Modal  for comments */}
+      {/* Modal for comments */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -419,7 +461,7 @@ const Home = () => {
                     style={styles.postMedia}
                   />
                 ) : null}
-                {/* Comment Input with Send Icon */}
+             
                 <View style={styles.commentInputContainer}>
                   <TextInput
                     style={styles.commentInput}
@@ -615,7 +657,7 @@ const styles = StyleSheet.create({
   commentName: {
     fontWeight: 'bold',
     fontSize: 14,
-    paddingRight:10
+    paddingRight: 10
   },
   commentText: {
     fontSize: 14,
