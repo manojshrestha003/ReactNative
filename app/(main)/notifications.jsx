@@ -1,13 +1,15 @@
-import { StyleSheet, Text, View, FlatList } from 'react-native';
+import { StyleSheet, Text, View, FlatList , TouchableOpacity} from 'react-native';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/authContext';
 import Header from '../../components/Header';
 import { supabase } from '../../lib/superbase';
 import Avatar from '../../components/Avatar';
+import { useRouter } from 'expo-router';
 
 const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const { user } = useAuth();
+  const router = useRouter();
 
   const fetchNotifications = async (receiverId) => {
     try {
@@ -40,21 +42,32 @@ const Notifications = () => {
   }, [user?.id]);
 
   const renderNotification = ({ item }) => (
-    <View style={styles.notificationItem}>
-      {/* Sender's Profile Image */}
-      <Avatar 
-        uri={item.sender?.image || 'https://via.placeholder.com/50'} 
-        style={styles.avatar} 
-      />
-      
-      {/* Notification Text */}
-      <View style={styles.notificationText}>
-        <Text style={styles.senderName}>{item.sender?.name || 'Unknown'} </Text>
-        <Text style={styles.message}>{item.title}</Text>
+    <TouchableOpacity
+      onPress={() => {
+        console.log('postId',item.postId)
+        if (item.postId) {
+          router.push(`/post/${item.postId}`);
+        } else {
+          console.warn('No postId found for this notification');
+        }
+      }}
+    >
+      <View style={styles.notificationItem}>
+        {/* Sender's Profile Image */}
+        <Avatar 
+          uri={item.sender?.image || 'https://via.placeholder.com/50'} 
+          style={styles.avatar} 
+        />
+        {/* Notification Text */}
+        <View style={styles.notificationText}>
+          <Text style={styles.senderName}>
+            {item.sender?.name || 'Unknown'}
+          </Text>
+          <Text style={styles.message}>{item.title}</Text>
+        </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
-
   return (
     <View style={styles.container}>
       <Header title="Notifications" />
